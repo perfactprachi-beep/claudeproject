@@ -11,6 +11,7 @@ import { AddressesPage } from '@pages/AccountPage/AddressesPage'
 import { PaymentMethodsPage } from '@pages/AccountPage/PaymentMethodsPage'
 import { ProfilePage } from '@pages/AccountPage/ProfilePage'
 import { FirstCitizenPage } from '@pages/AccountPage/FirstCitizenPage'
+import { SearchPage } from '@pages/SearchPage'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="/category/:categorySlug" element={<ProductListingPage />} />
+          <Route path="/search" element={<SearchPage />} />
         </Route>
 
         {/* Standalone login page (no layout wrapper) */}

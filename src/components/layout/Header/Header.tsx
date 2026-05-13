@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Search, User, Heart, ShoppingBag, Menu, X } from 'lucide-react'
+import { User, Heart, ShoppingBag, Menu, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { NavItem } from './NavItem'
 import { AuthModal } from '@components/auth/AuthModal'
+import { SearchBar } from '@components/search/SearchBar'
 import { useCartStore } from '@store/useCartStore'
 import { useWishlistStore } from '@store/useWishlistStore'
 import { useAuthStore } from '@store/useAuthStore'
@@ -58,12 +59,7 @@ export const Header = () => {
 
         {/* Icon group */}
         <div className="flex items-center gap-0.5 sm:gap-1">
-          <button
-            aria-label="Open search"
-            className="p-2 text-gray-600 hover:text-brand-red transition-colors rounded-full hover:bg-gray-50"
-          >
-            <Search size={20} />
-          </button>
+          <SearchBar />
 
           {isAuthenticated ? (
             <Link

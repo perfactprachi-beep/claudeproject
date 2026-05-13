@@ -41,3 +41,17 @@ export function trackProductClick(
 export function trackAddToWishlist(productId: string): void {
   fireEvent('add_to_wishlist', { product_id: productId })
 }
+
+// ── Search GA4 events ─────────────────────────────────────────────────────────
+
+export function trackSearch(searchTerm: string): void {
+  fireEvent('search', { search_term: searchTerm })
+}
+
+export function trackViewSearchResults(searchTerm: string, resultCount: number): void {
+  fireEvent('view_search_results', { search_term: searchTerm, result_count: resultCount })
+}
+
+export function trackSelectSearchContent(contentType: string, contentId: string): void {
+  fireEvent('select_content', { content_type: contentType, content_id: contentId })
+}
