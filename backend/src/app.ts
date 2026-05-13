@@ -3,10 +3,12 @@ import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
 import morgan from 'morgan'
+import swaggerUi from 'swagger-ui-express'
 import { env } from './config/env'
 import { defaultLimiter } from './middleware/rateLimit'
 import { errorHandler, notFound } from './middleware/errorHandler'
 import { logger } from './utils/logger'
+import { openApiSpec } from './docs/openapi'
 
 // Routes
 import authRoutes from './routes/auth.routes'
@@ -47,6 +49,13 @@ app.use(defaultLimiter)
 
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }))
+
+// Swagger UI — http://localhost:4000/api-docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, {
+  customSiteTitle: 'Shoppers Stop API Docs',
+  customCss: '.swagger-ui .topbar { background-color: #C0001D; } .swagger-ui .topbar-wrapper img { display: none; } .swagger-ui .topbar-wrapper::before { content: "Shoppers Stop API"; color: white; font-size: 1.2rem; font-weight: bold; }',
+  swaggerOptions: { persistAuthorization: true, displayRequestDuration: true, filter: true },
+}))
 
 // ── Public / User API ──────────────────────────────────────────────────────
 app.use('/api/auth',      authRoutes)
