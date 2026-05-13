@@ -17,6 +17,26 @@ import { ProductDetailPage } from '@pages/ProductDetailPage'
 import { CartPage } from '@pages/CartPage'
 import { CheckoutPage } from '@pages/CheckoutPage'
 
+// Admin
+import { AdminLayout } from './admin/components/layout/AdminLayout'
+import { AdminLoginPage } from './admin/pages/AdminLoginPage'
+import { DashboardPage } from './admin/pages/DashboardPage'
+import { ProductsPage } from './admin/pages/ProductsPage'
+import { CategoriesPage } from './admin/pages/CategoriesPage'
+import { BrandsPage } from './admin/pages/BrandsPage'
+import { InventoryPage } from './admin/pages/InventoryPage'
+import { OrdersPage as AdminOrdersPage } from './admin/pages/OrdersPage'
+import { OrderDetailPage as AdminOrderDetailPage } from './admin/pages/OrderDetailPage'
+import { ReturnsPage } from './admin/pages/ReturnsPage'
+import { CouponsPage } from './admin/pages/CouponsPage'
+import { CustomersPage } from './admin/pages/CustomersPage'
+import { LoyaltyPage } from './admin/pages/LoyaltyPage'
+import { BannersPage } from './admin/pages/BannersPage'
+import { SearchConfigPage } from './admin/pages/SearchConfigPage'
+import { AnalyticsPage } from './admin/pages/AnalyticsPage'
+import { StaffPage } from './admin/pages/StaffPage'
+import { SettingsPage } from './admin/pages/SettingsPage'
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -46,6 +66,29 @@ export default function App() {
           <Route path="payment-methods" element={<PaymentMethodsPage />} />
           <Route path="first-citizen" element={<FirstCitizenPage />} />
           <Route path="profile" element={<ProfilePage />} />
+        </Route>
+
+        {/* Admin — standalone login */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+
+        {/* Admin — protected panel */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="brands" element={<BrandsPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="orders/:orderId" element={<AdminOrderDetailPage />} />
+          <Route path="returns" element={<ReturnsPage />} />
+          <Route path="coupons" element={<CouponsPage />} />
+          <Route path="customers" element={<CustomersPage />} />
+          <Route path="loyalty" element={<LoyaltyPage />} />
+          <Route path="banners" element={<BannersPage />} />
+          <Route path="search" element={<SearchConfigPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
 
