@@ -1,3 +1,5 @@
+// ─── Lightweight product card (used by PLP / carousels) ──────────────────────
+
 export interface Product {
   id: string
   brand: string
@@ -13,6 +15,100 @@ export interface Product {
   reviewCount?: number
   isNew?: boolean
   isBestseller?: boolean
+}
+
+// ─── Full product detail model ────────────────────────────────────────────────
+
+/** Nested price breakdown for a product */
+export interface Price {
+  mrp: number
+  selling: number
+  discount: number
+  discountPercent: number
+}
+
+/** Size option with availability */
+export interface Size {
+  label: string
+  available: boolean
+  stockCount?: number
+}
+
+/** Colour swatch option */
+export interface Colour {
+  name: string
+  hex: string
+  /** Index into FullProduct.images for a colour-specific hero shot */
+  imageIndex?: number
+}
+
+/** Customer-submitted product review */
+export interface Review {
+  id: string
+  userId: string
+  userName: string
+  rating: 1 | 2 | 3 | 4 | 5
+  title?: string
+  body: string
+  images?: string[]
+  helpful: number
+  verified: boolean
+  createdAt: string
+}
+
+/** Aggregated rating info */
+export interface RatingInfo {
+  average: number
+  count: number
+  distribution: Record<1 | 2 | 3 | 4 | 5, number>
+}
+
+/** Delivery time and charges */
+export interface DeliveryInfo {
+  freeAbove: number
+  standardCharge: number
+  estimatedDays: string
+  expressAvailable: boolean
+}
+
+/** Return policy for a product */
+export interface ReturnPolicy {
+  returnable: boolean
+  returnWindowDays: number
+  conditions?: string
+}
+
+/**
+ * Complete product detail model with all fields required for a PDP.
+ * Lightweight listing variant: {@link Product}
+ */
+export interface FullProduct {
+  id: string
+  sku: string
+  name: string
+  brand: string
+  category: string
+  subCategory: string
+  images: string[]
+  thumbnails: string[]
+  price: Price
+  sizes: Size[]
+  colours: Colour[]
+  description: string
+  material: string
+  careInstructions: string
+  countryOfOrigin: string
+  ratings: RatingInfo
+  reviews: Review[]
+  tags: string[]
+  inStock: boolean
+  /** Key format: `${sizeLabel}_${colourName}` */
+  stockBySizeColour: Record<string, number>
+  fcPointsEarnable: number
+  deliveryInfo: DeliveryInfo
+  returnPolicy: ReturnPolicy
+  relatedProducts: string[]
+  completeLookProducts: string[]
 }
 
 export interface HeroSlide {
