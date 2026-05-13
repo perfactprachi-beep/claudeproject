@@ -80,6 +80,11 @@ vite.config.ts.timestamp-*
 .lock-wscript
 *.tgz
 
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
 # Editor / OS
 .DS_Store
 Thumbs.db
