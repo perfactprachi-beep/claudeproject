@@ -57,7 +57,7 @@ export function ProductCard({ product, position, listName }: ProductCardProps) {
     <article className="product-card group relative bg-white rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-shadow duration-200">
       {/* ── IMAGE BLOCK ─────────────────────────────────────────────── */}
       <Link
-        to={`/product/${product.slug}`}
+        to={`/product/${product.id}/${product.slug}`}
         onClick={() => trackProductClick(product.id, product.name, position, listName)}
         className="block relative overflow-hidden"
         style={{ paddingTop: '133.33%' }}

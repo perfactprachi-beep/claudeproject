@@ -55,3 +55,37 @@ export function trackViewSearchResults(searchTerm: string, resultCount: number):
 export function trackSelectSearchContent(contentType: string, contentId: string): void {
   fireEvent('select_content', { content_type: contentType, content_id: contentId })
 }
+
+// ── PDP GA4 events ────────────────────────────────────────────────────────────
+
+export function trackViewItem(
+  productId: string,
+  productName: string,
+  brand: string,
+  price: number,
+): void {
+  fireEvent('view_item', { product_id: productId, product_name: productName, brand, price })
+}
+
+export function trackAddToCart(
+  productId: string,
+  productName: string,
+  price: number,
+  quantity: number,
+): void {
+  fireEvent('add_to_cart', { product_id: productId, product_name: productName, price, quantity })
+}
+
+export function trackSelectItem(
+  productId: string,
+  productName: string,
+  position: number,
+  listName: string,
+): void {
+  fireEvent('select_item', {
+    product_id: productId,
+    product_name: productName,
+    position,
+    list_name: listName,
+  })
+}
