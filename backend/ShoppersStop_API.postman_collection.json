@@ -1,0 +1,905 @@
+{
+  "info": {
+    "name": "Shoppers Stop MVP — Full API",
+    "_postman_id": "shoppers-stop-mvp-api-v1",
+    "description": "Complete REST API collection for Shoppers Stop MVP.\n\n**Base URL:** `http://localhost:4000`\n\n**Dev Auth (no Firebase):**\n- Any route: `Authorization: Bearer devtoken`\n- Admin role: add header `x-dev-role: super_admin` (or `catalogue_mgr`, `order_mgr`, `support_agent`)\n\n**Error Codes:** PRODUCT_NOT_FOUND | OUT_OF_STOCK | COUPON_EXPIRED | COUPON_INVALID | COUPON_MIN_ORDER_NOT_MET | PAYMENT_FAILED | PAYMENT_VERIFICATION_FAILED | ORDER_NOT_CANCELLABLE | RETURN_WINDOW_EXPIRED | INSUFFICIENT_FC_POINTS | TOKEN_EXPIRED | INSUFFICIENT_PERMISSIONS | VALIDATION_ERROR | RATE_LIMIT_EXCEEDED",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000", "type": "string" },
+    { "key": "devToken", "value": "devtoken", "type": "string" },
+    { "key": "productId", "value": "", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" },
+    { "key": "addressId", "value": "", "type": "string" },
+    { "key": "variantId", "value": "", "type": "string" },
+    { "key": "cartItemId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{devToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "🟢 Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api-docs", "host": ["{{baseUrl}}"], "path": ["api-docs"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Verify Firebase Token",
+          "request": {
+            "method": "POST", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/auth/verify-token", "host": ["{{baseUrl}}"], "path": ["api","auth","verify-token"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"<firebase-id-token>\"\n}" }
+          }
+        },
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"firebaseUid\": \"uid_123\",\n  \"name\": \"Prachi Shah\",\n  \"email\": \"prachi@example.com\",\n  \"mobile\": \"9876543210\",\n  \"gender\": \"female\",\n  \"birthday\": \"1995-06-15\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/auth/admin/login", "host": ["{{baseUrl}}"], "path": ["api","auth","admin","login"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@shoppersstop.com\",\n  \"password\": \"Admin@123\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛍️ Products (Storefront)",
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/products?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","products"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"20"},{"key":"category","value":"","disabled":true},{"key":"brand","value":"","disabled":true},{"key":"minPrice","value":"","disabled":true},{"key":"maxPrice","value":"","disabled":true},{"key":"sort","value":"featured","disabled":true},{"key":"q","value":"","disabled":true}] }
+          }
+        },
+        {
+          "name": "Get Product Detail",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api","products","{{productId}}"] }
+          }
+        },
+        {
+          "name": "Get Product Reviews",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/products/{{productId}}/reviews?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["api","products","{{productId}}","reviews"] }
+          }
+        },
+        {
+          "name": "Submit Review (auth required)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/products/{{productId}}/reviews", "host": ["{{baseUrl}}"], "path": ["api","products","{{productId}}","reviews"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"title\": \"Loved it!\",\n  \"body\": \"Great quality and perfect fit.\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📂 Categories",
+      "item": [
+        {
+          "name": "Get Category Tree",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api","categories"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏷️ Brands",
+      "item": [
+        {
+          "name": "Get All Brands",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/brands", "host": ["{{baseUrl}}"], "path": ["api","brands"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Search",
+      "item": [
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/search?q=kurti&hitsPerPage=20", "host": ["{{baseUrl}}"], "path": ["api","search"], "query": [{"key":"q","value":"kurti"},{"key":"hitsPerPage","value":"20"}] }
+          }
+        },
+        {
+          "name": "Autocomplete Suggestions",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/search/suggestions?q=ku", "host": ["{{baseUrl}}"], "path": ["api","search","suggestions"], "query": [{"key":"q","value":"ku"}] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛒 Cart",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/cart", "host": ["{{baseUrl}}"], "path": ["api","cart"] }
+          }
+        },
+        {
+          "name": "Add Item to Cart",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/cart/items", "host": ["{{baseUrl}}"], "path": ["api","cart","items"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": 1\n}" }
+          }
+        },
+        {
+          "name": "Update Cart Item Quantity",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/cart/items/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["api","cart","items","{{cartItemId}}"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 2\n}" }
+          }
+        },
+        {
+          "name": "Remove Cart Item",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/cart/items/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["api","cart","items","{{cartItemId}}"] }
+          }
+        },
+        {
+          "name": "Apply Coupon",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/cart/coupon", "host": ["{{baseUrl}}"], "path": ["api","cart","coupon"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"WELCOME200\"\n}" }
+          }
+        },
+        {
+          "name": "Remove Coupon",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/cart/coupon", "host": ["{{baseUrl}}"], "path": ["api","cart","coupon"] }
+          }
+        },
+        {
+          "name": "Toggle FC Points",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/cart/fc-points", "host": ["{{baseUrl}}"], "path": ["api","cart","fc-points"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"apply\": true\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏷️ Coupons",
+      "item": [
+        {
+          "name": "Validate Coupon",
+          "request": {
+            "method": "POST", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/coupons/validate", "host": ["{{baseUrl}}"], "path": ["api","coupons","validate"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"WELCOME200\",\n  \"subtotal\": 1500\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Orders (Storefront)",
+      "item": [
+        {
+          "name": "Place Order",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api","orders"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"addressId\": \"{{addressId}}\",\n  \"paymentMethod\": \"razorpay_upi\"\n}" }
+          }
+        },
+        {
+          "name": "My Order History",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/orders?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["api","orders"] }
+          }
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api","orders","{{orderId}}"] }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api","orders","{{orderId}}","cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Payments",
+      "item": [
+        {
+          "name": "Create Razorpay Order",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/payments/create-order", "host": ["{{baseUrl}}"], "path": ["api","payments","create-order"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 1799,\n  \"receipt\": \"receipt_001\"\n}" }
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/payments/verify", "host": ["{{baseUrl}}"], "path": ["api","payments","verify"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"razorpayOrderId\": \"order_xxx\",\n  \"razorpayPaymentId\": \"pay_xxx\",\n  \"razorpaySignature\": \"sig_xxx\",\n  \"orderId\": \"{{orderId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Razorpay Webhook",
+          "request": {
+            "method": "POST", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/payments/webhook", "host": ["{{baseUrl}}"], "path": ["api","payments","webhook"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-razorpay-signature", "value": "<signature>" }],
+            "body": { "mode": "raw", "raw": "{\n  \"event\": \"payment.captured\",\n  \"payload\": { \"payment\": { \"entity\": { \"order_id\": \"order_xxx\", \"id\": \"pay_xxx\" } } }\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Returns",
+      "item": [
+        {
+          "name": "Submit Return Request",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/returns", "host": ["{{baseUrl}}"], "path": ["api","returns"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"productName\": \"Floral Print Straight Kurti\",\n  \"reason\": \"Size issue\",\n  \"customerNote\": \"XL was too large, need L\",\n  \"refundAmount\": 1799,\n  \"refundMethod\": \"original\"\n}" }
+          }
+        },
+        {
+          "name": "My Return Requests",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/returns", "host": ["{{baseUrl}}"], "path": ["api","returns"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 User Profile & Addresses",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/user/profile", "host": ["{{baseUrl}}"], "path": ["api","user","profile"] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/user/profile", "host": ["{{baseUrl}}"], "path": ["api","user","profile"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Prachi Shah\",\n  \"mobile\": \"9876543210\",\n  \"gender\": \"female\",\n  \"birthday\": \"1995-06-15\"\n}" }
+          }
+        },
+        {
+          "name": "Get Addresses",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/user/addresses", "host": ["{{baseUrl}}"], "path": ["api","user","addresses"] }
+          }
+        },
+        {
+          "name": "Add Address",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/user/addresses", "host": ["{{baseUrl}}"], "path": ["api","user","addresses"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"Home\",\n  \"fullName\": \"Prachi Shah\",\n  \"mobile\": \"9876543210\",\n  \"line1\": \"42 Marine Drive\",\n  \"line2\": \"Flat 5B\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"pincode\": \"400001\",\n  \"isDefault\": true\n}" }
+          }
+        },
+        {
+          "name": "Update Address",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/user/addresses/{{addressId}}", "host": ["{{baseUrl}}"], "path": ["api","user","addresses","{{addressId}}"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"Office\",\n  \"isDefault\": false\n}" }
+          }
+        },
+        {
+          "name": "Delete Address",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/user/addresses/{{addressId}}", "host": ["{{baseUrl}}"], "path": ["api","user","addresses","{{addressId}}"] }
+          }
+        },
+        {
+          "name": "Get Wishlist",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/user/wishlist", "host": ["{{baseUrl}}"], "path": ["api","user","wishlist"] }
+          }
+        },
+        {
+          "name": "Add to Wishlist",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/user/wishlist/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api","user","wishlist","{{productId}}"] }
+          }
+        },
+        {
+          "name": "Remove from Wishlist",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/user/wishlist/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api","user","wishlist","{{productId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⭐ First Citizen (FC)",
+      "item": [
+        {
+          "name": "Get FC Account",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/fc/account", "host": ["{{baseUrl}}"], "path": ["api","fc","account"] }
+          }
+        },
+        {
+          "name": "FC Transaction History",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/fc/transactions?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","fc","transactions"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚚 Delivery",
+      "item": [
+        {
+          "name": "Check Pincode Serviceability",
+          "request": {
+            "method": "POST", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/delivery/check-pincode", "host": ["{{baseUrl}}"], "path": ["api","delivery","check-pincode"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"pincode\": \"400001\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏠 CMS / Banners (Storefront)",
+      "item": [
+        {
+          "name": "Get Active Banners",
+          "request": {
+            "method": "GET", "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/api/cms/banners?page=homepage&position=hero_carousel", "host": ["{{baseUrl}}"], "path": ["api","cms","banners"], "query": [{"key":"page","value":"homepage"},{"key":"position","value":"hero_carousel"}] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Products",
+      "item": [
+        {
+          "name": "Admin List Products",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/products?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","products"] }
+          }
+        },
+        {
+          "name": "Admin Create Product",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/products", "host": ["{{baseUrl}}"], "path": ["api","products"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Printed Maxi Dress\",\n  \"brandId\": \"<brand-id>\",\n  \"categoryId\": \"<category-id>\",\n  \"mrp\": 3499,\n  \"sellingPrice\": 2499,\n  \"description\": \"Beautiful printed maxi dress for summer.\",\n  \"tags\": [\"dress\", \"maxi\", \"western\"],\n  \"variants\": [\n    { \"sku\": \"PMD-S-BLU\", \"size\": \"S\", \"colour\": \"Blue\", \"stock\": 20 },\n    { \"sku\": \"PMD-M-BLU\", \"size\": \"M\", \"colour\": \"Blue\", \"stock\": 15 },\n    { \"sku\": \"PMD-L-BLU\", \"size\": \"L\", \"colour\": \"Blue\", \"stock\": 10 }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Admin Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api","products","{{productId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"sellingPrice\": 2199,\n  \"status\": \"active\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api","products","{{productId}}"] }
+          }
+        },
+        {
+          "name": "Admin Approve Review",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/reviews/<review-id>/approve", "host": ["{{baseUrl}}"], "path": ["api","admin","reviews","<review-id>","approve"] }
+          }
+        },
+        {
+          "name": "Admin Delete Review",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/reviews/<review-id>", "host": ["{{baseUrl}}"], "path": ["api","admin","reviews","<review-id>"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Categories & Brands",
+      "item": [
+        {
+          "name": "Admin Create Category",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api","categories"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Kids\",\n  \"imageUrl\": \"https://example.com/kids.jpg\",\n  \"sortOrder\": 3\n}" }
+          }
+        },
+        {
+          "name": "Admin Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/categories/<category-id>", "host": ["{{baseUrl}}"], "path": ["api","categories","<category-id>"] },
+            "body": { "mode": "raw", "raw": "{\n  \"sortOrder\": 5\n}" }
+          }
+        },
+        {
+          "name": "Admin Create Brand",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/brands", "host": ["{{baseUrl}}"], "path": ["api","brands"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Biba\",\n  \"logoUrl\": \"https://example.com/biba.png\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Update Brand",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/brands/<brand-id>", "host": ["{{baseUrl}}"], "path": ["api","brands","<brand-id>"] },
+            "body": { "mode": "raw", "raw": "{\n  \"isActive\": true\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Inventory",
+      "item": [
+        {
+          "name": "Get Inventory",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/inventory?page=1&limit=20&status=low", "host": ["{{baseUrl}}"], "path": ["api","admin","inventory"] }
+          }
+        },
+        {
+          "name": "Update Stock",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/inventory/{{variantId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","inventory","{{variantId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"stock\": 50,\n  \"reorderLevel\": 10\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Orders",
+      "item": [
+        {
+          "name": "Admin Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/orders?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","admin","orders"] }
+          }
+        },
+        {
+          "name": "Admin Filter Orders by Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/orders?status=pending&page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","admin","orders"], "query": [{"key":"status","value":"pending"},{"key":"page","value":"1"},{"key":"limit","value":"20"}] }
+          }
+        },
+        {
+          "name": "Admin Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/orders/{{orderId}}/status", "host": ["{{baseUrl}}"], "path": ["api","admin","orders","{{orderId}}","status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"shipped\",\n  \"trackingNumber\": \"AWB123456789\",\n  \"courier\": \"Delhivery\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Add Order Note",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/orders/{{orderId}}/note", "host": ["{{baseUrl}}"], "path": ["api","admin","orders","{{orderId}}","note"] },
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Customer requested gift wrapping.\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Payments",
+      "item": [
+        {
+          "name": "Admin Initiate Refund",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/payments/refund", "host": ["{{baseUrl}}"], "path": ["api","admin","payments","refund"] },
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 1799\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Returns",
+      "item": [
+        {
+          "name": "Admin Get All Returns",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/returns?status=pending", "host": ["{{baseUrl}}"], "path": ["api","admin","returns"] }
+          }
+        },
+        {
+          "name": "Admin Approve Return",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/returns/<return-id>", "host": ["{{baseUrl}}"], "path": ["api","admin","returns","<return-id>"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"approved\",\n  \"refundMethod\": \"original\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Reject Return",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/returns/<return-id>", "host": ["{{baseUrl}}"], "path": ["api","admin","returns","<return-id>"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"rejected\",\n  \"rejectionNote\": \"Product shows signs of wear.\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Coupons",
+      "item": [
+        {
+          "name": "Admin List Coupons",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/coupons", "host": ["{{baseUrl}}"], "path": ["api","admin","coupons"] }
+          }
+        },
+        {
+          "name": "Admin Create Coupon",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/coupons", "host": ["{{baseUrl}}"], "path": ["api","admin","coupons"] },
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"SUMMER30\",\n  \"type\": \"percent\",\n  \"value\": 30,\n  \"minOrderValue\": 1499,\n  \"usageLimit\": 500,\n  \"userLimit\": 1,\n  \"startDate\": \"2026-01-01T00:00:00.000Z\",\n  \"expiry\": \"2026-12-31T23:59:59.000Z\",\n  \"applicableTo\": \"all\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Update Coupon",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/coupons/<coupon-id>", "host": ["{{baseUrl}}"], "path": ["api","admin","coupons","<coupon-id>"] },
+            "body": { "mode": "raw", "raw": "{\n  \"usageLimit\": 1000\n}" }
+          }
+        },
+        {
+          "name": "Admin Toggle Coupon",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/coupons/<coupon-id>/toggle", "host": ["{{baseUrl}}"], "path": ["api","admin","coupons","<coupon-id>","toggle"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Banners / CMS",
+      "item": [
+        {
+          "name": "Admin List Banners",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/cms/banners", "host": ["{{baseUrl}}"], "path": ["api","admin","cms","banners"] }
+          }
+        },
+        {
+          "name": "Admin Create Banner",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/cms/banners", "host": ["{{baseUrl}}"], "path": ["api","admin","cms","banners"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Monsoon Sale\",\n  \"page\": \"homepage\",\n  \"position\": \"hero_carousel\",\n  \"desktopImage\": \"https://example.com/monsoon-desktop.jpg\",\n  \"mobileImage\": \"https://example.com/monsoon-mobile.jpg\",\n  \"headline\": \"Monsoon Sale — Up to 50% Off\",\n  \"ctaLabel\": \"Shop Now\",\n  \"ctaUrl\": \"/sale\",\n  \"startDate\": \"2026-06-01T00:00:00.000Z\",\n  \"endDate\": \"2026-08-31T23:59:59.000Z\",\n  \"evergreen\": false,\n  \"priority\": 1\n}" }
+          }
+        },
+        {
+          "name": "Admin Update Banner",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/cms/banners/<banner-id>", "host": ["{{baseUrl}}"], "path": ["api","admin","cms","banners","<banner-id>"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"active\",\n  \"priority\": 2\n}" }
+          }
+        },
+        {
+          "name": "Admin Delete Banner",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/cms/banners/<banner-id>", "host": ["{{baseUrl}}"], "path": ["api","admin","cms","banners","<banner-id>"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Search",
+      "item": [
+        {
+          "name": "Admin Get Synonyms",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/search/synonyms", "host": ["{{baseUrl}}"], "path": ["api","admin","search","synonyms"] }
+          }
+        },
+        {
+          "name": "Admin Create Synonym",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "catalogue_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/search/synonyms", "host": ["{{baseUrl}}"], "path": ["api","admin","search","synonyms"] },
+            "body": { "mode": "raw", "raw": "{\n  \"objectId\": \"kurti-synonyms\",\n  \"synonyms\": [\"kurti\", \"kurta\", \"top\", \"tunic\"]\n}" }
+          }
+        },
+        {
+          "name": "Admin Full Reindex to Algolia",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/search/reindex", "host": ["{{baseUrl}}"], "path": ["api","admin","search","reindex"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — First Citizen",
+      "item": [
+        {
+          "name": "Admin Adjust Points",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/fc/adjust-points", "host": ["{{baseUrl}}"], "path": ["api","admin","fc","adjust-points"] },
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"<user-id>\",\n  \"points\": 500,\n  \"type\": \"adjusted_credit\",\n  \"description\": \"Loyalty bonus for feedback survey\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Bulk Award Points",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/fc/bulk-award", "host": ["{{baseUrl}}"], "path": ["api","admin","fc","bulk-award"] },
+            "body": { "mode": "raw", "raw": "{\n  \"userIds\": [\"user-id-1\", \"user-id-2\"],\n  \"points\": 200,\n  \"description\": \"Diwali bonus points campaign\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Update Tier Rules",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/fc/tier-rules", "host": ["{{baseUrl}}"], "path": ["api","admin","fc","tier-rules"] },
+            "body": { "mode": "raw", "raw": "{\n  \"rules\": [\n    { \"tier\": \"classic\",  \"minSpend\": 0,     \"pointsRate\": 1 },\n    { \"tier\": \"silver\",   \"minSpend\": 10000, \"pointsRate\": 2 },\n    { \"tier\": \"gold\",     \"minSpend\": 30000, \"pointsRate\": 3 },\n    { \"tier\": \"platinum\", \"minSpend\": 75000, \"pointsRate\": 5 }\n  ]\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Delivery",
+      "item": [
+        {
+          "name": "Admin Create Shipment Manifest",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "order_mgr" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/delivery/manifest", "host": ["{{baseUrl}}"], "path": ["api","admin","delivery","manifest"] },
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Analytics",
+      "item": [
+        {
+          "name": "Revenue Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/analytics/revenue?from=2026-01-01&to=2026-12-31", "host": ["{{baseUrl}}"], "path": ["api","admin","analytics","revenue"] }
+          }
+        },
+        {
+          "name": "Order Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/analytics/orders", "host": ["{{baseUrl}}"], "path": ["api","admin","analytics","orders"] }
+          }
+        },
+        {
+          "name": "Customer Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/analytics/customers", "host": ["{{baseUrl}}"], "path": ["api","admin","analytics","customers"] }
+          }
+        },
+        {
+          "name": "Product Performance",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/analytics/products", "host": ["{{baseUrl}}"], "path": ["api","admin","analytics","products"] }
+          }
+        },
+        {
+          "name": "Search Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/analytics/search", "host": ["{{baseUrl}}"], "path": ["api","admin","analytics","search"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Staff",
+      "item": [
+        {
+          "name": "Admin Get All Staff",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/staff", "host": ["{{baseUrl}}"], "path": ["api","admin","staff"] }
+          }
+        },
+        {
+          "name": "Admin Create Staff",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/staff", "host": ["{{baseUrl}}"], "path": ["api","admin","staff"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Riya Sharma\",\n  \"email\": \"riya@shoppersstop.com\",\n  \"role\": \"catalogue_mgr\",\n  \"sendInvite\": false\n}" }
+          }
+        },
+        {
+          "name": "Admin Change Staff Role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/staff/<staff-id>/role", "host": ["{{baseUrl}}"], "path": ["api","admin","staff","<staff-id>","role"] },
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"order_mgr\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Suspend Staff",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/staff/<staff-id>/status", "host": ["{{baseUrl}}"], "path": ["api","admin","staff","<staff-id>","status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"suspended\"\n}" }
+          }
+        },
+        {
+          "name": "Admin Audit Log",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/staff/audit-log?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","admin","staff","audit-log"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 ADMIN — Customers",
+      "item": [
+        {
+          "name": "Admin Get Customers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/customers?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","admin","customers"] }
+          }
+        },
+        {
+          "name": "Admin Search Customers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-dev-role", "value": "super_admin" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/customers?search=prachi&page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api","admin","customers"], "query": [{"key":"search","value":"prachi"},{"key":"page","value":"1"},{"key":"limit","value":"20"}] }
+          }
+        }
+      ]
+    }
+  ]
+}

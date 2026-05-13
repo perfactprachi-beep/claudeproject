@@ -3,150 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 // ──────────────────── ENUMS ────────────────────────
-
-enum AdminRole {
-  super_admin
-  catalogue_mgr
-  order_mgr
-  support_agent
-}
-
-enum StaffStatus {
-  active
-  suspended
-}
-
-enum UserStatus {
-  active
-  blocked
-}
-
-enum Gender {
-  male
-  female
-  other
-  prefer_not_to_say
-}
-
-enum FCTier {
-  classic
-  silver
-  gold
-  platinum
-}
-
-enum ProductStatus {
-  active
-  draft
-  out_of_stock
-  deleted
-}
-
-enum OrderStatus {
-  pending
-  confirmed
-  processing
-  shipped
-  delivered
-  cancelled
-  returned
-}
-
-enum PaymentMethod {
-  razorpay_card
-  razorpay_upi
-  razorpay_netbanking
-  razorpay_wallet
-  cod
-  fc_points
-  store_credit
-}
-
-enum PaymentStatus {
-  pending
-  paid
-  failed
-  refunded
-  partially_refunded
-}
-
-enum ReturnStatus {
-  pending
-  approved
-  rejected
-}
-
-enum RefundMethod {
-  original
-  store_credit
-  fc_points
-}
-
-enum CouponType {
-  percent
-  flat
-  free_delivery
-  buy_x_get_y
-}
-
-enum CouponApplicableTo {
-  all
-  first_citizens
-  new_users
-}
-
-enum CouponStatus {
-  active
-  inactive
-}
-
-enum BannerPage {
-  homepage
-  plp
-  pdp
-  cart
-  all
-}
-
-enum BannerPosition {
-  hero_carousel
-  announcement_bar
-  section_banner
-  popup
-}
-
-enum BannerStatus {
-  active
-  scheduled
-  expired
-}
-
-enum InventoryStatus {
-  healthy
-  low
-  out_of_stock
-}
-
-enum PointTransactionType {
-  earned_purchase
-  earned_bonus
-  redeemed
-  expired
-  adjusted_credit
-  adjusted_debit
-  refund_credit
-}
-
-enum ReviewStatus {
-  pending
-  approved
-  rejected
-}
+// SQLite does not support native enums — stored as String
 
 // ──────────────────── USERS ────────────────────────
 
@@ -156,10 +18,10 @@ model User {
   email           String      @unique
   mobile          String?     @unique
   name            String
-  gender          Gender?
+  gender          String?
   birthday        DateTime?
   avatarUrl       String?
-  status          UserStatus  @default(active)
+  status          String      @default("active")
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -213,16 +75,16 @@ model SavedCard {
 // ──────────────────── STAFF ────────────────────────
 
 model StaffMember {
-  id            String      @id @default(cuid())
-  firebaseUid   String?     @unique
+  id            String    @id @default(cuid())
+  firebaseUid   String?   @unique
   name          String
-  email         String      @unique
-  role          AdminRole
-  status        StaffStatus @default(active)
-  joinedDate    DateTime    @default(now())
+  email         String    @unique
+  role          String
+  status        String    @default("active")
+  joinedDate    DateTime  @default(now())
   lastActive    DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   auditLogs     AuditLog[]
 
@@ -278,24 +140,24 @@ model Brand {
 }
 
 model Product {
-  id            String          @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String
-  slug          String          @unique
+  slug          String    @unique
   description   String?
-  brand         Brand           @relation(fields: [brandId], references: [id])
   brandId       String
-  category      Category        @relation(fields: [categoryId], references: [id])
+  brand         Brand     @relation(fields: [brandId], references: [id])
   categoryId    String
-  mrp           Decimal         @db.Decimal(10, 2)
-  sellingPrice  Decimal         @db.Decimal(10, 2)
+  category      Category  @relation(fields: [categoryId], references: [id])
+  mrp           Float
+  sellingPrice  Float
   thumbnailUrl  String?
-  images        String[]
-  tags          String[]
-  status        ProductStatus   @default(draft)
+  images        String    @default("[]")
+  tags          String    @default("[]")
+  status        String    @default("draft")
   algoliaId     String?
-  isFeatured    Boolean         @default(false)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  isFeatured    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   variants      ProductVariant[]
   reviews       Review[]
@@ -307,19 +169,19 @@ model Product {
 }
 
 model ProductVariant {
-  id          String          @id @default(cuid())
-  productId   String
-  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sku         String          @unique
-  size        String
-  colour      String
-  stock       Int             @default(0)
-  reorderLevel Int            @default(10)
-  status      InventoryStatus @default(healthy)
-  updatedAt   DateTime        @updatedAt
+  id           String    @id @default(cuid())
+  productId    String
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku          String    @unique
+  size         String
+  colour       String
+  stock        Int       @default(0)
+  reorderLevel Int       @default(10)
+  status       String    @default("healthy")
+  updatedAt    DateTime  @updatedAt
 
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
 
   @@map("product_variants")
 }
@@ -327,15 +189,15 @@ model ProductVariant {
 // ──────────────────── CART ─────────────────────────
 
 model Cart {
-  id              String      @id @default(cuid())
-  userId          String?     @unique
-  user            User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionId       String?     @unique
+  id              String    @id @default(cuid())
+  userId          String?   @unique
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId       String?   @unique
   couponId        String?
-  coupon          Coupon?     @relation(fields: [couponId], references: [id])
-  fcPointsApplied Int         @default(0)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  coupon          Coupon?   @relation(fields: [couponId], references: [id])
+  fcPointsApplied Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   items           CartItem[]
 
@@ -343,15 +205,15 @@ model Cart {
 }
 
 model CartItem {
-  id          String          @id @default(cuid())
+  id          String         @id @default(cuid())
   cartId      String
-  cart        Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cart        Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId   String
-  product     Product         @relation(fields: [productId], references: [id])
+  product     Product        @relation(fields: [productId], references: [id])
   variantId   String
-  variant     ProductVariant  @relation(fields: [variantId], references: [id])
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
   quantity    Int
-  addedAt     DateTime        @default(now())
+  addedAt     DateTime       @default(now())
 
   @@unique([cartId, variantId])
   @@map("cart_items")
@@ -372,52 +234,52 @@ model WishlistItem {
 // ──────────────────── ORDERS ───────────────────────
 
 model Order {
-  id                String        @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
-  user              User          @relation(fields: [userId], references: [id])
+  user              User      @relation(fields: [userId], references: [id])
   addressId         String
-  address           Address       @relation(fields: [addressId], references: [id])
-  status            OrderStatus   @default(pending)
-  subtotal          Decimal       @db.Decimal(10, 2)
-  discount          Decimal       @default(0) @db.Decimal(10, 2)
-  fcPointsRedeemed  Int           @default(0)
-  fcDiscount        Decimal       @default(0) @db.Decimal(10, 2)
-  deliveryCharge    Decimal       @default(0) @db.Decimal(10, 2)
-  total             Decimal       @db.Decimal(10, 2)
-  paymentMethod     PaymentMethod
-  paymentStatus     PaymentStatus @default(pending)
+  address           Address   @relation(fields: [addressId], references: [id])
+  status            String    @default("pending")
+  subtotal          Float
+  discount          Float     @default(0)
+  fcPointsRedeemed  Int       @default(0)
+  fcDiscount        Float     @default(0)
+  deliveryCharge    Float     @default(0)
+  total             Float
+  paymentMethod     String
+  paymentStatus     String    @default("pending")
   razorpayOrderId   String?
   razorpayPaymentId String?
-  transactionId     String        @unique @default(cuid())
+  transactionId     String    @unique @default(cuid())
   couponId          String?
-  coupon            Coupon?       @relation(fields: [couponId], references: [id])
+  coupon            Coupon?   @relation(fields: [couponId], references: [id])
   trackingNumber    String?
   courier           String?
   internalNote      String?
-  fcPointsEarned    Int           @default(0)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  fcPointsEarned    Int       @default(0)
+  shiprocketShipmentId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   items             OrderItem[]
   returns           Return[]
-  shiprocketShipmentId String?
 
   @@map("orders")
 }
 
 model OrderItem {
-  id          String          @id @default(cuid())
+  id          String         @id @default(cuid())
   orderId     String
-  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId   String
-  product     Product         @relation(fields: [productId], references: [id])
+  product     Product        @relation(fields: [productId], references: [id])
   variantId   String
-  variant     ProductVariant  @relation(fields: [variantId], references: [id])
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
   productName String
   size        String
   colour      String
   quantity    Int
-  unitPrice   Decimal         @db.Decimal(10, 2)
+  unitPrice   Float
   imageUrl    String?
 
   @@map("order_items")
@@ -426,17 +288,17 @@ model OrderItem {
 // ──────────────────── PAYMENTS ─────────────────────
 
 model Payment {
-  id                  String        @id @default(cuid())
-  razorpayOrderId     String        @unique
-  razorpayPaymentId   String?       @unique
-  amount              Int
-  currency            String        @default("INR")
-  status              PaymentStatus @default(pending)
-  refundId            String?
-  refundAmount        Int?
-  metadata            Json?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  id                String    @id @default(cuid())
+  razorpayOrderId   String    @unique
+  razorpayPaymentId String?   @unique
+  amount            Int
+  currency          String    @default("INR")
+  status            String    @default("pending")
+  refundId          String?
+  refundAmount      Int?
+  metadata          String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@map("payments")
 }
@@ -444,23 +306,23 @@ model Payment {
 // ──────────────────── RETURNS ──────────────────────
 
 model Return {
-  id            String        @id @default(cuid())
+  id            String    @id @default(cuid())
   orderId       String
-  order         Order         @relation(fields: [orderId], references: [id])
+  order         Order     @relation(fields: [orderId], references: [id])
   userId        String
-  user          User          @relation(fields: [userId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
   productName   String
   reason        String
   customerNote  String?
-  photos        String[]
-  refundAmount  Decimal       @db.Decimal(10, 2)
-  refundMethod  RefundMethod  @default(original)
-  status        ReturnStatus  @default(pending)
+  photos        String    @default("[]")
+  refundAmount  Float
+  refundMethod  String    @default("original")
+  status        String    @default("pending")
   rejectionNote String?
-  requestedDate DateTime      @default(now())
+  requestedDate DateTime  @default(now())
   resolvedAt    DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@map("returns")
 }
@@ -468,22 +330,22 @@ model Return {
 // ──────────────────── COUPONS ──────────────────────
 
 model Coupon {
-  id              String              @id @default(cuid())
-  code            String              @unique
-  type            CouponType
-  value           Decimal             @db.Decimal(10, 2)
-  minOrderValue   Decimal             @default(0) @db.Decimal(10, 2)
-  usageCount      Int                 @default(0)
+  id              String    @id @default(cuid())
+  code            String    @unique
+  type            String
+  value           Float
+  minOrderValue   Float     @default(0)
+  usageCount      Int       @default(0)
   usageLimit      Int
-  userLimit       Int                 @default(1)
+  userLimit       Int       @default(1)
   startDate       DateTime
   expiry          DateTime
-  applicableTo    CouponApplicableTo  @default(all)
-  status          CouponStatus        @default(active)
-  categories      String[]
-  brands          String[]
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  applicableTo    String    @default("all")
+  status          String    @default("active")
+  categories      String    @default("[]")
+  brands          String    @default("[]")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   carts           Cart[]
   orders          Order[]
@@ -507,31 +369,31 @@ model CouponUsage {
 // ──────────────────── REVIEWS ──────────────────────
 
 model Review {
-  id          String        @id @default(cuid())
+  id          String    @id @default(cuid())
   productId   String
-  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   userId      String
-  user        User          @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
   rating      Int
   title       String?
   body        String
-  photos      String[]
-  status      ReviewStatus  @default(pending)
-  isVerified  Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  photos      String    @default("[]")
+  status      String    @default("pending")
+  isVerified  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([productId, userId])
   @@map("reviews")
 }
 
-// ──────────────────── BANNERS / CMS ────────────────
+// ──────────────────── BANNERS ──────────────────────
 
 model Banner {
-  id              String          @id @default(cuid())
+  id              String    @id @default(cuid())
   name            String
-  page            BannerPage
-  position        BannerPosition
+  page            String
+  position        String
   desktopImage    String
   mobileImage     String
   headline        String?
@@ -539,11 +401,11 @@ model Banner {
   ctaUrl          String?
   startDate       DateTime
   endDate         DateTime?
-  evergreen       Boolean         @default(false)
-  priority        Int             @default(0)
-  status          BannerStatus    @default(scheduled)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  evergreen       Boolean   @default(false)
+  priority        Int       @default(0)
+  status          String    @default("scheduled")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@map("banners")
 }
@@ -551,19 +413,19 @@ model Banner {
 // ──────────────────── FIRST CITIZEN ────────────────
 
 model FirstCitizenAccount {
-  id                  String                @id @default(cuid())
-  userId              String                @unique
-  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cardNumber          String                @unique
-  tier                FCTier                @default(classic)
-  pointsBalance       Int                   @default(0)
-  annualSpend         Decimal               @default(0) @db.Decimal(12, 2)
-  pointsIssuedMTD     Int                   @default(0)
-  pointsRedeemedMTD   Int                   @default(0)
-  joinedDate          DateTime              @default(now())
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardNumber          String    @unique
+  tier                String    @default("classic")
+  pointsBalance       Int       @default(0)
+  annualSpend         Float     @default(0)
+  pointsIssuedMTD     Int       @default(0)
+  pointsRedeemedMTD   Int       @default(0)
+  joinedDate          DateTime  @default(now())
   expiryDate          DateTime?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   transactions        PointTransaction[]
 
@@ -571,24 +433,24 @@ model FirstCitizenAccount {
 }
 
 model PointTransaction {
-  id            String                @id @default(cuid())
+  id            String              @id @default(cuid())
   accountId     String
-  account       FirstCitizenAccount   @relation(fields: [accountId], references: [id])
-  type          PointTransactionType
+  account       FirstCitizenAccount @relation(fields: [accountId], references: [id])
+  type          String
   points        Int
   description   String
   orderId       String?
   expiresAt     DateTime?
-  createdAt     DateTime              @default(now())
+  createdAt     DateTime            @default(now())
 
   @@map("point_transactions")
 }
 
 model FCTierRule {
   id          String    @id @default(cuid())
-  tier        FCTier    @unique
-  minSpend    Decimal   @db.Decimal(12, 2)
-  pointsRate  Decimal   @db.Decimal(5, 2)
+  tier        String    @unique
+  minSpend    Float
+  pointsRate  Float
   updatedAt   DateTime  @updatedAt
 
   @@map("fc_tier_rules")
@@ -599,7 +461,7 @@ model FCTierRule {
 model SearchSynonym {
   id          String    @id @default(cuid())
   objectId    String    @unique
-  synonyms    String[]
+  synonyms    String    @default("[]")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
-import { firebaseAuth } from '../config/firebase'
+import { getFirebaseAuth } from '../config/firebase'
 import { prisma } from '../config/database'
 import { Errors } from '../utils/errors'
-import { AdminRole } from '@prisma/client'
+import { env } from '../config/env'
+
+export type AdminRole = 'super_admin' | 'catalogue_mgr' | 'order_mgr' | 'support_agent'
 
 declare global {
   namespace Express {
@@ -15,14 +17,30 @@ declare global {
   }
 }
 
+const DEV_BYPASS = env.isDev && !env.FIREBASE_PROJECT_ID
+
 export async function verifyToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const authHeader = req.headers.authorization
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw Errors.UNAUTHORIZED()
+    if (DEV_BYPASS) {
+      // In dev without Firebase, accept any Bearer token as the user ID
+      const authHeader = req.headers.authorization
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        req.firebaseUid = token
+        req.userId = token
+      }
+      next()
+      return
     }
+
+    const authHeader = req.headers.authorization
+    if (!authHeader?.startsWith('Bearer ')) throw Errors.UNAUTHORIZED()
     const token = authHeader.slice(7)
-    const decoded = await firebaseAuth.verifyIdToken(token)
+
+    const auth = getFirebaseAuth()
+    if (!auth) throw Errors.UNAUTHORIZED()
+
+    const decoded = await auth.verifyIdToken(token)
     req.firebaseUid = decoded.uid
 
     const user = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid }, select: { id: true } })
@@ -44,11 +62,23 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
 
 export async function verifyAdminToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    if (DEV_BYPASS) {
+      // Dev bypass: pass ?role=super_admin in query or use header x-dev-role
+      const role = (req.headers['x-dev-role'] as string) || (req.query.role as string) || 'super_admin'
+      req.staffRole = role as AdminRole
+      req.staffId = 'dev-staff-id'
+      next()
+      return
+    }
+
     const authHeader = req.headers.authorization
     if (!authHeader?.startsWith('Bearer ')) throw Errors.UNAUTHORIZED()
-
     const token = authHeader.slice(7)
-    const decoded = await firebaseAuth.verifyIdToken(token)
+
+    const auth = getFirebaseAuth()
+    if (!auth) throw Errors.UNAUTHORIZED()
+
+    const decoded = await auth.verifyIdToken(token)
 
     const staff = await prisma.staffMember.findUnique({
       where: { firebaseUid: decoded.uid },
@@ -59,7 +89,7 @@ export async function verifyAdminToken(req: Request, res: Response, next: NextFu
     if (staff.status === 'suspended') throw Errors.INSUFFICIENT_PERMISSIONS()
 
     req.staffId = staff.id
-    req.staffRole = staff.role
+    req.staffRole = staff.role as AdminRole
     next()
   } catch (err) {
     next(err)

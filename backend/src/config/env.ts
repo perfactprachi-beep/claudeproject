@@ -1,12 +1,6 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
-function required(key: string): string {
-  const val = process.env[key]
-  if (!val) throw new Error(`Missing required env var: ${key}`)
-  return val
-}
-
 function optional(key: string, fallback = ''): string {
   return process.env[key] ?? fallback
 }
@@ -16,12 +10,12 @@ export const env = {
   PORT: parseInt(optional('PORT', '4000'), 10),
   FRONTEND_URL: optional('FRONTEND_URL', 'http://localhost:5173'),
 
-  DATABASE_URL: required('DATABASE_URL'),
-  REDIS_URL: optional('REDIS_URL', 'redis://localhost:6379'),
+  DATABASE_URL: optional('DATABASE_URL', 'file:./dev.db'),
+  REDIS_URL: optional('REDIS_URL', ''),
 
-  FIREBASE_PROJECT_ID: required('FIREBASE_PROJECT_ID'),
-  FIREBASE_CLIENT_EMAIL: required('FIREBASE_CLIENT_EMAIL'),
-  FIREBASE_PRIVATE_KEY: required('FIREBASE_PRIVATE_KEY').replace(/\\n/g, '\n'),
+  FIREBASE_PROJECT_ID: optional('FIREBASE_PROJECT_ID'),
+  FIREBASE_CLIENT_EMAIL: optional('FIREBASE_CLIENT_EMAIL'),
+  FIREBASE_PRIVATE_KEY: optional('FIREBASE_PRIVATE_KEY').replace(/\\n/g, '\n'),
 
   AWS_ACCESS_KEY_ID: optional('AWS_ACCESS_KEY_ID'),
   AWS_SECRET_ACCESS_KEY: optional('AWS_SECRET_ACCESS_KEY'),
@@ -42,18 +36,18 @@ export const env = {
   ALGOLIA_SEARCH_KEY: optional('ALGOLIA_SEARCH_KEY'),
   ALGOLIA_INDEX_NAME: optional('ALGOLIA_INDEX_NAME', 'shoppers_stop_products'),
 
-  RAZORPAY_KEY_ID: optional('RAZORPAY_KEY_ID'),
-  RAZORPAY_KEY_SECRET: optional('RAZORPAY_KEY_SECRET'),
-  RAZORPAY_WEBHOOK_SECRET: optional('RAZORPAY_WEBHOOK_SECRET'),
+  RAZORPAY_KEY_ID: optional('RAZORPAY_KEY_ID', 'rzp_test_placeholder'),
+  RAZORPAY_KEY_SECRET: optional('RAZORPAY_KEY_SECRET', 'placeholder'),
+  RAZORPAY_WEBHOOK_SECRET: optional('RAZORPAY_WEBHOOK_SECRET', 'placeholder'),
 
   SHIPROCKET_EMAIL: optional('SHIPROCKET_EMAIL'),
   SHIPROCKET_PASSWORD: optional('SHIPROCKET_PASSWORD'),
   SHIPROCKET_BASE_URL: optional('SHIPROCKET_BASE_URL', 'https://apiv2.shiprocket.in/v1/external'),
 
-  JWT_SECRET: optional('JWT_SECRET', 'change-me-in-production'),
+  JWT_SECRET: optional('JWT_SECRET', 'dev-secret-key-change-in-production-32ch'),
 
   RATE_LIMIT_WINDOW_MS: parseInt(optional('RATE_LIMIT_WINDOW_MS', '900000'), 10),
-  RATE_LIMIT_MAX_REQUESTS: parseInt(optional('RATE_LIMIT_MAX_REQUESTS', '100'), 10),
+  RATE_LIMIT_MAX_REQUESTS: parseInt(optional('RATE_LIMIT_MAX_REQUESTS', '1000'), 10),
 
   isProd: process.env.NODE_ENV === 'production',
   isDev: process.env.NODE_ENV !== 'production',
