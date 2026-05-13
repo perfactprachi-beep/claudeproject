@@ -1,3 +1,7 @@
+import type { FCTier } from './enums'
+
+// ─── Core user profile (used by auth store) ───────────────────────────────────
+
 export interface User {
   id: string
   fullName: string
@@ -8,6 +12,30 @@ export interface User {
   avatarUrl?: string
   firstCitizenId?: string
   createdAt: string
+}
+
+// ─── Full user account model ──────────────────────────────────────────────────
+
+/**
+ * Complete user account model.
+ * Lightweight auth variant: {@link User}
+ */
+export interface FullUser {
+  uid: string
+  name: string
+  email: string
+  mobile: string
+  gender: 'Male' | 'Female' | 'Other' | 'Prefer not to say'
+  birthday?: string
+  firstCitizenNumber?: string
+  tier: FCTier
+  addresses: Address[]
+  defaultAddressId?: string
+  savedCards: SavedCard[]
+  savedUpiIds: string[]
+  /** Array of product IDs saved to wishlist */
+  wishlist: string[]
+  communicationPrefs: CommunicationPrefs
 }
 
 export interface Address {
