@@ -1,0 +1,1 @@
+export { FCPointsBadge } from './FCPointsBadge'
