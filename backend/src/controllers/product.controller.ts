@@ -64,29 +64,84 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
 
 export async function createProduct(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, brandId, categoryId, mrp, sellingPrice, description, tags, variants } = req.body as {
-      name: string; brandId: string; categoryId: string; mrp: number; sellingPrice: number
-      description?: string; tags?: string[]; variants?: { sku: string; size: string; colour: string; stock: number }[]
+    const {
+      name,
+      brandId: bodyBrandId, brandName,
+      categoryId: bodyCategoryId, categoryName,
+      sku: bodySku,
+      mrp, sellingPrice, description,
+      thumbnailUrl, stock, status: bodyStatus,
+      variants,
+    } = req.body as {
+      name: string
+      brandId?: string; brandName?: string
+      categoryId?: string; categoryName?: string
+      sku?: string
+      mrp: number; sellingPrice: number
+      description?: string
+      thumbnailUrl?: string
+      stock?: number
+      status?: string
+      variants?: { sku: string; size: string; colour: string; stock: number }[]
     }
 
+    // Resolve brand — accept name or ID, create if not found
+    let brandId = bodyBrandId
+    if (!brandId && brandName) {
+      const brand = await prisma.brand.findFirst({ where: { name: { equals: brandName, mode: 'insensitive' } } })
+      if (brand) {
+        brandId = brand.id
+      } else {
+        const slug = brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        const created = await prisma.brand.create({ data: { name: brandName, slug } })
+        brandId = created.id
+      }
+    }
+    if (!brandId) throw Errors.VALIDATION_ERROR('brandId or brandName is required')
+
+    // Resolve category — accept name or ID, create if not found
+    let categoryId = bodyCategoryId
+    if (!categoryId && categoryName) {
+      const cat = await prisma.category.findFirst({ where: { name: { equals: categoryName, mode: 'insensitive' } } })
+      if (cat) {
+        categoryId = cat.id
+      } else {
+        const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        const created = await prisma.category.create({ data: { name: categoryName, slug } })
+        categoryId = created.id
+      }
+    }
+    if (!categoryId) throw Errors.VALIDATION_ERROR('categoryId or categoryName is required')
+
+    const sku = bodySku || `SKU-${Date.now()}`
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now()
+
+    const statusMap: Record<string, string> = { active: 'ACTIVE', draft: 'DRAFT', out_of_stock: 'DRAFT' }
+    const status = (statusMap[bodyStatus ?? 'draft'] ?? 'DRAFT') as 'ACTIVE' | 'DRAFT'
 
     const product = await prisma.product.create({
       data: {
-        name, brandId, categoryId, mrp, sellingPrice, description, tags: tags ?? [], slug,
+        name, sku, slug, brandId, categoryId, mrp, sellingPrice, description, status,
+        images: thumbnailUrl ? { create: { url: thumbnailUrl, isPrimary: true, sortOrder: 0 } } : undefined,
         variants: variants?.length
-          ? { create: variants.map(v => ({ ...v, status: v.stock > 10 ? 'healthy' : v.stock > 0 ? 'low' : 'out_of_stock' as never })) }
-          : undefined,
+          ? { create: variants.map(v => ({ skuVariant: v.sku, size: v.size, colour: v.colour, stockQuantity: v.stock })) }
+          : stock !== undefined
+            ? { create: { skuVariant: `${sku}-DEFAULT`, size: 'Free Size', colour: 'Default', stockQuantity: stock } }
+            : undefined,
       },
-      include: { brand: true, category: true, variants: true },
+      include: { brand: true, category: true, variants: true, images: true },
     })
 
-    await indexProduct({
-      objectID: product.id, name: product.name, brand: product.brand.name,
-      category: product.category.name, mrp: parseFloat(product.mrp.toString()),
-      sellingPrice: parseFloat(product.sellingPrice.toString()),
-      thumbnailUrl: product.thumbnailUrl, tags: product.tags, status: product.status,
-    })
+    try {
+      await indexProduct({
+        objectID: product.id, name: product.name, brand: product.brand.name,
+        category: product.category.name, mrp: parseFloat(product.mrp.toString()),
+        sellingPrice: parseFloat(product.sellingPrice.toString()),
+        thumbnailUrl: thumbnailUrl ?? undefined, tags: [], status: product.status,
+      })
+    } catch {
+      // Algolia not configured in dev — non-fatal
+    }
 
     sendSuccess(res, product, 201)
   } catch (err) {

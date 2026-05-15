@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Shoppers Stop MVP — REST API (Node.js + Express + TypeScript)",
   "main": "dist/index.js",
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",

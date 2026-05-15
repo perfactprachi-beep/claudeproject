@@ -197,15 +197,58 @@ export function ProductsPage() {
         <ProductFormModal
           product={editProduct}
           onClose={() => setShowForm(false)}
-          onSave={(p) => {
+          onSave={async (p) => {
             if (editProduct) {
               setProducts(ps => ps.map(x => x.id === p.id ? p : x))
               show('Product updated', 'success')
+              setShowForm(false)
             } else {
-              setProducts(ps => [{ ...p, id: `P${Date.now()}`, createdAt: new Date().toISOString().split('T')[0] }, ...ps])
-              show('Product created', 'success')
+              try {
+                const res = await fetch('http://localhost:4000/api/products', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer dev-token',
+                    'x-dev-role': 'super_admin',
+                  },
+                  body: JSON.stringify({
+                    name: p.name,
+                    brandName: p.brand,
+                    categoryName: p.category,
+                    sku: p.sku || undefined,
+                    mrp: p.mrp,
+                    sellingPrice: p.sellingPrice,
+                    stock: p.stock,
+                    status: p.status,
+                    thumbnailUrl: p.thumbnail || undefined,
+                    description: '',
+                  }),
+                })
+                const json = await res.json()
+                if (!res.ok) throw new Error(json.message || 'Failed to save product')
+                const saved = json.data
+                const created: AdminProduct = {
+                  id: saved.id,
+                  name: saved.name,
+                  brand: saved.brand?.name ?? p.brand,
+                  sku: saved.sku,
+                  category: saved.category?.name ?? p.category,
+                  subcategory: p.subcategory,
+                  mrp: parseFloat(saved.mrp),
+                  sellingPrice: parseFloat(saved.sellingPrice),
+                  stock: p.stock,
+                  status: p.status,
+                  thumbnail: p.thumbnail,
+                  createdAt: saved.createdAt?.split('T')[0] ?? new Date().toISOString().split('T')[0],
+                  tags: [],
+                }
+                setProducts(ps => [created, ...ps])
+                show('Product saved to database ✓', 'success')
+                setShowForm(false)
+              } catch (err) {
+                show(err instanceof Error ? err.message : 'Failed to save product', 'error')
+              }
             }
-            setShowForm(false)
           }}
         />
       )}
@@ -231,15 +274,21 @@ function SortTh({ label, field, current, dir, onSort }: { label: string; field: 
   )
 }
 
-function ProductFormModal({ product, onClose, onSave }: { product: AdminProduct | null; onClose: () => void; onSave: (p: AdminProduct) => void }) {
+function ProductFormModal({ product, onClose, onSave }: { product: AdminProduct | null; onClose: () => void; onSave: (p: AdminProduct) => Promise<void> }) {
   const [form, setForm] = useState<Partial<AdminProduct>>(product ?? {
     name: '', brand: '', sku: '', category: 'Women', subcategory: '', mrp: 0, sellingPrice: 0, stock: 0, status: 'draft', thumbnail: '', tags: []
   })
+  const [saving, setSaving] = useState(false)
 
   const discount = form.mrp && form.sellingPrice ? Math.round((1 - form.sellingPrice / form.mrp) * 100) : 0
 
-  const handleSave = (asDraft: boolean) => {
-    onSave({ ...form, status: asDraft ? 'draft' : 'active' } as AdminProduct)
+  const handleSave = async (asDraft: boolean) => {
+    setSaving(true)
+    try {
+      await onSave({ ...form, status: asDraft ? 'draft' : 'active' } as AdminProduct)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -310,9 +359,13 @@ function ProductFormModal({ product, onClose, onSave }: { product: AdminProduct 
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex gap-3 justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button onClick={() => handleSave(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Save as Draft</button>
-          <button onClick={() => handleSave(false)} className="px-4 py-2 text-sm font-medium text-white bg-[#C0001D] rounded-lg hover:bg-red-800">Publish</button>
+          <button onClick={onClose} disabled={saving} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+          <button onClick={() => handleSave(true)} disabled={saving} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save as Draft'}
+          </button>
+          <button onClick={() => handleSave(false)} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-[#C0001D] rounded-lg hover:bg-red-800 disabled:opacity-50">
+            {saving ? 'Publishing…' : 'Publish'}
+          </button>
         </div>
       </div>
     </div>
