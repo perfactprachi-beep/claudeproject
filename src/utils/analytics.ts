@@ -89,3 +89,42 @@ export function trackSelectItem(
     list_name: listName,
   })
 }
+
+export function trackRemoveFromCart(productId: string, productName: string, price: number, quantity: number): void {
+  fireEvent('remove_from_cart', { product_id: productId, product_name: productName, price, quantity })
+}
+
+// ── Ecommerce GA4 events ──────────────────────────────────────────────────────
+
+export interface GAItem {
+  item_id: string
+  item_name: string
+  item_brand?: string
+  item_category?: string
+  price: number
+  quantity: number
+}
+
+export function trackViewItemList(listName: string, items: GAItem[]): void {
+  fireEvent('view_item_list', { item_list_name: listName, currency: 'INR', items })
+}
+
+export function trackBeginCheckout(value: number, items: GAItem[]): void {
+  fireEvent('begin_checkout', { currency: 'INR', value, items })
+}
+
+export function trackAddShippingInfo(value: number, shippingTier: string, items: GAItem[]): void {
+  fireEvent('add_shipping_info', { currency: 'INR', value, shipping_tier: shippingTier, items })
+}
+
+export function trackAddPaymentInfo(value: number, paymentType: string, items: GAItem[]): void {
+  fireEvent('add_payment_info', { currency: 'INR', value, payment_type: paymentType, items })
+}
+
+export function trackPurchase(transactionId: string, value: number, items: GAItem[]): void {
+  fireEvent('purchase', { transaction_id: transactionId, currency: 'INR', value, items })
+}
+
+export function trackRefund(transactionId: string, value: number, items?: GAItem[]): void {
+  fireEvent('refund', { transaction_id: transactionId, currency: 'INR', value, ...(items ? { items } : {}) })
+}
