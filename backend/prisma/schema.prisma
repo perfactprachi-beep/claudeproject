@@ -3,467 +3,646 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 // ──────────────────── ENUMS ────────────────────────
-// SQLite does not support native enums — stored as String
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  CATALOGUE_MGR
+  ORDER_MGR
+  SUPPORT
+}
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
+}
+
+enum ProductStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURN_REQUESTED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum CouponType {
+  PERCENT
+  FLAT
+  FREE_DELIVERY
+  BXGY
+}
+
+enum CouponApplicableTo {
+  ALL
+  FC_MEMBERS
+  NEW_USERS
+}
+
+enum ReturnReason {
+  WRONG_SIZE
+  DEFECTIVE
+  NOT_AS_DESCRIBED
+  CHANGED_MIND
+  OTHER
+}
+
+enum RefundMethod {
+  ORIGINAL
+  STORE_CREDIT
+  FC_POINTS
+}
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PICKED_UP
+  REFUNDED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FcTier {
+  CLASSIC
+  SILVER_EDGE
+  PLATINUM
+  BLACK
+}
+
+enum FcTransactionType {
+  EARNED
+  REDEEMED
+  EXPIRED
+  MANUAL_CREDIT
+  MANUAL_DEBIT
+  BIRTHDAY_BONUS
+}
+
+enum BannerPage {
+  HOMEPAGE
+  PLP
+  PDP
+  CART
+  ALL
+}
+
+enum BannerPosition {
+  HERO
+  ANNOUNCEMENT
+  SECTION
+  POPUP
+}
+
+enum SynonymType {
+  TWO_WAY
+  ONE_WAY
+}
 
 // ──────────────────── USERS ────────────────────────
 
 model User {
-  id              String      @id @default(cuid())
-  firebaseUid     String      @unique
-  email           String      @unique
-  mobile          String?     @unique
-  name            String
-  gender          String?
-  birthday        DateTime?
-  avatarUrl       String?
-  status          String      @default("active")
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id          String     @id @default(uuid()) @db.Uuid
+  firebaseUid String     @unique
+  email       String     @unique
+  mobile      String?    @unique
+  name        String
+  gender      Gender?
+  birthday    DateTime?  @db.Date
+  avatarUrl   String?
+  fcMemberId  String?    @unique
+  role        UserRole   @default(CUSTOMER)
+  adminRole   AdminRole?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  addresses       Address[]
-  orders          Order[]
-  cart            Cart?
-  wishlistItems   WishlistItem[]
-  reviews         Review[]
-  returns         Return[]
-  fcAccount       FirstCitizenAccount?
-  savedCards      SavedCard[]
+  addresses          Address[]
+  orders             Order[]
+  cart               Cart?
+  wishlistItems      WishlistItem[]
+  reviews            Review[]
+  savedCards         SavedCard[]
+  fcAccount          FcAccount?
+  returns            Return[]         @relation("UserReturn")
+  returnsProcessed   Return[]         @relation("ReturnProcessor")
+  statusLogsChanged  OrderStatusLog[]
+  fcTransactionsCreated FcTransaction[] @relation("FcTransactionCreator")
+  bannersCreated     Banner[]
+  auditLogs          StaffAuditLog[]
 
   @@map("users")
 }
 
 model Address {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  label         String?
-  fullName      String
-  mobile        String
-  line1         String
-  line2         String?
-  city          String
-  state         String
-  pincode       String
-  isDefault     Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String      @db.Uuid
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName    String
+  mobile      String
+  line1       String
+  line2       String?
+  city        String
+  state       String
+  pincode     String
+  addressType AddressType @default(HOME)
+  isDefault   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  orders        Order[]
+  orders Order[]
 
   @@map("addresses")
 }
 
 model SavedCard {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   razorpayToken String
   last4         String
   network       String
   expiryMonth   Int
   expiryYear    Int
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime @default(now())
 
   @@map("saved_cards")
-}
-
-// ──────────────────── STAFF ────────────────────────
-
-model StaffMember {
-  id            String    @id @default(cuid())
-  firebaseUid   String?   @unique
-  name          String
-  email         String    @unique
-  role          String
-  status        String    @default("active")
-  joinedDate    DateTime  @default(now())
-  lastActive    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  auditLogs     AuditLog[]
-
-  @@map("staff_members")
-}
-
-model AuditLog {
-  id          String      @id @default(cuid())
-  staffId     String
-  staff       StaffMember @relation(fields: [staffId], references: [id])
-  action      String
-  module      String
-  recordId    String
-  details     String
-  ipAddress   String?
-  createdAt   DateTime    @default(now())
-
-  @@map("audit_logs")
 }
 
 // ──────────────────── CATALOGUE ────────────────────
 
 model Category {
-  id          String      @id @default(cuid())
-  name        String      @unique
-  slug        String      @unique
-  parentId    String?
-  parent      Category?   @relation("CategoryTree", fields: [parentId], references: [id])
-  children    Category[]  @relation("CategoryTree")
-  imageUrl    String?
-  sortOrder   Int         @default(0)
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id              String     @id @default(uuid()) @db.Uuid
+  name            String
+  slug            String     @unique
+  parentId        String?    @db.Uuid
+  parent          Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children        Category[] @relation("CategoryTree")
+  imageUrl        String?
+  bannerUrl       String?
+  metaTitle       String?
+  metaDescription String?
+  sortOrder       Int        @default(0)
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
 
-  products    Product[]
+  products Product[]
 
   @@map("categories")
 }
 
 model Brand {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
   logoUrl     String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  description String?
+  websiteUrl  String?
+  isFeatured  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
-  products    Product[]
+  products Product[]
 
   @@map("brands")
 }
 
 model Product {
-  id            String    @id @default(cuid())
-  name          String
-  slug          String    @unique
-  description   String?
-  brandId       String
-  brand         Brand     @relation(fields: [brandId], references: [id])
-  categoryId    String
-  category      Category  @relation(fields: [categoryId], references: [id])
-  mrp           Float
-  sellingPrice  Float
-  thumbnailUrl  String?
-  images        String    @default("[]")
-  tags          String    @default("[]")
-  status        String    @default("draft")
-  algoliaId     String?
-  isFeatured    Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String        @id @default(uuid()) @db.Uuid
+  sku              String        @unique
+  name             String
+  slug             String        @unique
+  brandId          String        @db.Uuid
+  brand            Brand         @relation(fields: [brandId], references: [id])
+  categoryId       String        @db.Uuid
+  category         Category      @relation(fields: [categoryId], references: [id])
+  description      String?
+  material         String?
+  careInstructions String?
+  countryOfOrigin  String?
+  mrp              Decimal       @db.Decimal(10, 2)
+  sellingPrice     Decimal       @db.Decimal(10, 2)
+  discountPercent  Decimal?      @db.Decimal(5, 2)
+  fcPointsEarnable Int           @default(0)
+  returnPolicyDays Int           @default(15)
+  status           ProductStatus @default(DRAFT)
+  metaTitle        String?
+  metaDescription  String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  publishedAt      DateTime?
 
-  variants      ProductVariant[]
-  reviews       Review[]
-  wishlistItems WishlistItem[]
-  cartItems     CartItem[]
-  orderItems    OrderItem[]
+  images         ProductImage[]
+  variants       ProductVariant[]
+  reviews        Review[]
+  wishlistItems  WishlistItem[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  searchPromoted SearchPromoted[]
 
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([status])
+  @@index([slug])
   @@map("products")
 }
 
+model ProductImage {
+  id           String  @id @default(uuid()) @db.Uuid
+  productId    String  @db.Uuid
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url          String
+  thumbnailUrl String?
+  sortOrder    Int     @default(0)
+  isPrimary    Boolean @default(false)
+
+  @@map("product_images")
+}
+
 model ProductVariant {
-  id           String    @id @default(cuid())
-  productId    String
-  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sku          String    @unique
-  size         String
-  colour       String
-  stock        Int       @default(0)
-  reorderLevel Int       @default(10)
-  status       String    @default("healthy")
-  updatedAt    DateTime  @updatedAt
+  id            String   @id @default(uuid()) @db.Uuid
+  productId     String   @db.Uuid
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size          String
+  colour        String
+  colourHex     String?
+  stockQuantity Int      @default(0)
+  reorderLevel  Int      @default(10)
+  skuVariant    String   @unique
+  isActive      Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
 
-  cartItems    CartItem[]
-  orderItems   OrderItem[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
 
+  @@index([productId])
+  @@index([skuVariant])
   @@map("product_variants")
+}
+
+// ──────────────────── WISHLIST ─────────────────────
+
+model WishlistItem {
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String   @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, productId])
+  @@map("wishlists")
 }
 
 // ──────────────────── CART ─────────────────────────
 
 model Cart {
-  id              String    @id @default(cuid())
-  userId          String?   @unique
-  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionId       String?   @unique
-  couponId        String?
-  coupon          Coupon?   @relation(fields: [couponId], references: [id])
-  fcPointsApplied Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String?  @unique @db.Uuid
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId        String?  @unique
+  couponId         String?  @db.Uuid
+  coupon           Coupon?  @relation(fields: [couponId], references: [id])
+  fcPointsRedeemed Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  items           CartItem[]
+  items CartItem[]
 
   @@map("carts")
 }
 
 model CartItem {
-  id          String         @id @default(cuid())
-  cartId      String
-  cart        Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product        @relation(fields: [productId], references: [id])
-  variantId   String
-  variant     ProductVariant @relation(fields: [variantId], references: [id])
-  quantity    Int
-  addedAt     DateTime       @default(now())
+  id        String         @id @default(uuid()) @db.Uuid
+  cartId    String         @db.Uuid
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String         @db.Uuid
+  product   Product        @relation(fields: [productId], references: [id])
+  variantId String         @db.Uuid
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  unitPrice Decimal        @db.Decimal(10, 2)
+  createdAt DateTime       @default(now())
 
   @@unique([cartId, variantId])
   @@map("cart_items")
 }
 
-model WishlistItem {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  addedAt     DateTime  @default(now())
-
-  @@unique([userId, productId])
-  @@map("wishlist_items")
-}
-
-// ──────────────────── ORDERS ───────────────────────
-
-model Order {
-  id                String    @id @default(cuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id])
-  addressId         String
-  address           Address   @relation(fields: [addressId], references: [id])
-  status            String    @default("pending")
-  subtotal          Float
-  discount          Float     @default(0)
-  fcPointsRedeemed  Int       @default(0)
-  fcDiscount        Float     @default(0)
-  deliveryCharge    Float     @default(0)
-  total             Float
-  paymentMethod     String
-  paymentStatus     String    @default("pending")
-  razorpayOrderId   String?
-  razorpayPaymentId String?
-  transactionId     String    @unique @default(cuid())
-  couponId          String?
-  coupon            Coupon?   @relation(fields: [couponId], references: [id])
-  trackingNumber    String?
-  courier           String?
-  internalNote      String?
-  fcPointsEarned    Int       @default(0)
-  shiprocketShipmentId String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  items             OrderItem[]
-  returns           Return[]
-
-  @@map("orders")
-}
-
-model OrderItem {
-  id          String         @id @default(cuid())
-  orderId     String
-  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product        @relation(fields: [productId], references: [id])
-  variantId   String
-  variant     ProductVariant @relation(fields: [variantId], references: [id])
-  productName String
-  size        String
-  colour      String
-  quantity    Int
-  unitPrice   Float
-  imageUrl    String?
-
-  @@map("order_items")
-}
-
-// ──────────────────── PAYMENTS ─────────────────────
-
-model Payment {
-  id                String    @id @default(cuid())
-  razorpayOrderId   String    @unique
-  razorpayPaymentId String?   @unique
-  amount            Int
-  currency          String    @default("INR")
-  status            String    @default("pending")
-  refundId          String?
-  refundAmount      Int?
-  metadata          String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@map("payments")
-}
-
-// ──────────────────── RETURNS ──────────────────────
-
-model Return {
-  id            String    @id @default(cuid())
-  orderId       String
-  order         Order     @relation(fields: [orderId], references: [id])
-  userId        String
-  user          User      @relation(fields: [userId], references: [id])
-  productName   String
-  reason        String
-  customerNote  String?
-  photos        String    @default("[]")
-  refundAmount  Float
-  refundMethod  String    @default("original")
-  status        String    @default("pending")
-  rejectionNote String?
-  requestedDate DateTime  @default(now())
-  resolvedAt    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@map("returns")
-}
-
 // ──────────────────── COUPONS ──────────────────────
 
 model Coupon {
-  id              String    @id @default(cuid())
-  code            String    @unique
-  type            String
-  value           Float
-  minOrderValue   Float     @default(0)
-  usageCount      Int       @default(0)
-  usageLimit      Int
-  userLimit       Int       @default(1)
-  startDate       DateTime
-  expiry          DateTime
-  applicableTo    String    @default("all")
-  status          String    @default("active")
-  categories      String    @default("[]")
-  brands          String    @default("[]")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String             @id @default(uuid()) @db.Uuid
+  code              String             @unique
+  type              CouponType
+  value             Decimal            @db.Decimal(10, 2)
+  minOrderValue     Decimal            @default(0) @db.Decimal(10, 2)
+  maxDiscount       Decimal?           @db.Decimal(10, 2)
+  usageLimit        Int?
+  usageLimitPerUser Int                @default(1)
+  usageCount        Int                @default(0)
+  applicableTo      CouponApplicableTo @default(ALL)
+  startsAt          DateTime
+  expiresAt         DateTime
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
 
-  carts           Cart[]
-  orders          Order[]
-  userUsages      CouponUsage[]
+  carts  Cart[]
+  orders Order[]
+  usages CouponUsage[]
 
   @@map("coupons")
 }
 
 model CouponUsage {
-  id        String    @id @default(cuid())
-  couponId  String
-  coupon    Coupon    @relation(fields: [couponId], references: [id])
-  userId    String
-  orderId   String?
-  usedAt    DateTime  @default(now())
+  id       String   @id @default(uuid()) @db.Uuid
+  couponId String   @db.Uuid
+  coupon   Coupon   @relation(fields: [couponId], references: [id])
+  userId   String   @db.Uuid
+  orderId  String?  @db.Uuid
+  usedAt   DateTime @default(now())
 
   @@unique([couponId, userId, orderId])
   @@map("coupon_usages")
 }
 
+// ──────────────────── ORDERS ───────────────────────
+
+model Order {
+  id               String        @id @default(uuid()) @db.Uuid
+  orderNumber      String        @unique
+  userId           String        @db.Uuid
+  user             User          @relation(fields: [userId], references: [id])
+  addressId        String        @db.Uuid
+  address          Address       @relation(fields: [addressId], references: [id])
+  addressSnapshot  Json
+  subtotal         Decimal       @db.Decimal(10, 2)
+  discountOnMrp    Decimal       @default(0) @db.Decimal(10, 2)
+  couponDiscount   Decimal       @default(0) @db.Decimal(10, 2)
+  deliveryCharges  Decimal       @default(0) @db.Decimal(10, 2)
+  fcPointsRedeemed Int           @default(0)
+  fcPointsValue    Decimal       @default(0) @db.Decimal(10, 2)
+  totalAmount      Decimal       @db.Decimal(10, 2)
+  couponId         String?       @db.Uuid
+  coupon           Coupon?       @relation(fields: [couponId], references: [id])
+  status           OrderStatus   @default(PENDING)
+  razorpayOrderId  String?
+  paymentMethod    String?
+  paymentStatus    PaymentStatus @default(PENDING)
+  trackingNumber   String?
+  courierPartner   String?
+  fcPointsEarned   Int           @default(0)
+  internalNote     String?
+  placedAt         DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  items      OrderItem[]
+  statusLogs OrderStatusLog[]
+  returns    Return[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([placedAt])
+  @@index([orderNumber])
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String         @id @default(uuid()) @db.Uuid
+  orderId         String         @db.Uuid
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String         @db.Uuid
+  product         Product        @relation(fields: [productId], references: [id])
+  variantId       String         @db.Uuid
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  productSnapshot Json
+  quantity        Int
+  unitPrice       Decimal        @db.Decimal(10, 2)
+  totalPrice      Decimal        @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderStatusLog {
+  id              String       @id @default(uuid()) @db.Uuid
+  orderId         String       @db.Uuid
+  order           Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  oldStatus       OrderStatus?
+  newStatus       OrderStatus
+  changedByUserId String?      @db.Uuid
+  changedBy       User?        @relation(fields: [changedByUserId], references: [id])
+  note            String?
+  createdAt       DateTime     @default(now())
+
+  @@map("order_status_logs")
+}
+
+// ──────────────────── RETURNS ──────────────────────
+
+model Return {
+  id            String        @id @default(uuid()) @db.Uuid
+  orderId       String        @db.Uuid
+  order         Order         @relation(fields: [orderId], references: [id])
+  userId        String        @db.Uuid
+  user          User          @relation("UserReturn", fields: [userId], references: [id])
+  items         Json
+  reason        ReturnReason
+  customerNote  String?
+  evidenceUrls  String[]
+  refundAmount  Decimal?      @db.Decimal(10, 2)
+  refundMethod  RefundMethod?
+  status        ReturnStatus  @default(REQUESTED)
+  adminNote     String?
+  processedById String?       @db.Uuid
+  processedBy   User?         @relation("ReturnProcessor", fields: [processedById], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("returns")
+}
+
 // ──────────────────── REVIEWS ──────────────────────
 
 model Review {
-  id          String    @id @default(cuid())
-  productId   String
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  rating      Int
-  title       String?
-  body        String
-  photos      String    @default("[]")
-  status      String    @default("pending")
-  isVerified  Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String       @id @default(uuid()) @db.Uuid
+  productId    String       @db.Uuid
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId       String       @db.Uuid
+  user         User         @relation(fields: [userId], references: [id])
+  orderId      String?      @db.Uuid
+  rating       Int          @db.SmallInt
+  title        String?
+  body         String
+  helpfulCount Int          @default(0)
+  status       ReviewStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@unique([productId, userId])
   @@map("reviews")
 }
 
+// ──────────────────── FIRST CITIZEN ────────────────
+
+model FcAccount {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @unique @db.Uuid
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memberNumber     String    @unique
+  tier             FcTier    @default(CLASSIC)
+  pointsBalance    Int       @default(0)
+  annualSpend      Decimal   @default(0) @db.Decimal(12, 2)
+  memberSince      DateTime  @default(now())
+  expiryDate       DateTime?
+  linkedCardNumber String?
+
+  transactions FcTransaction[]
+
+  @@map("fc_accounts")
+}
+
+model FcTransaction {
+  id          String            @id @default(uuid()) @db.Uuid
+  fcAccountId String            @db.Uuid
+  fcAccount   FcAccount         @relation(fields: [fcAccountId], references: [id])
+  type        FcTransactionType
+  points      Int
+  balanceAfter Int
+  referenceId String?
+  note        String?
+  createdById String?           @db.Uuid
+  createdBy   User?             @relation("FcTransactionCreator", fields: [createdById], references: [id])
+  createdAt   DateTime          @default(now())
+
+  @@index([fcAccountId])
+  @@index([createdAt])
+  @@map("fc_transactions")
+}
+
+model FcTierRule {
+  id         String   @id @default(uuid()) @db.Uuid
+  tier       FcTier   @unique
+  minSpend   Decimal  @db.Decimal(12, 2)
+  pointsRate Decimal  @db.Decimal(5, 2)
+  updatedAt  DateTime @updatedAt
+
+  @@map("fc_tier_rules")
+}
+
 // ──────────────────── BANNERS ──────────────────────
 
 model Banner {
-  id              String    @id @default(cuid())
-  name            String
-  page            String
-  position        String
-  desktopImage    String
-  mobileImage     String
-  headline        String?
-  ctaLabel        String?
-  ctaUrl          String?
-  startDate       DateTime
-  endDate         DateTime?
-  evergreen       Boolean   @default(false)
-  priority        Int       @default(0)
-  status          String    @default("scheduled")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String         @id @default(uuid()) @db.Uuid
+  name           String
+  page           BannerPage
+  position       BannerPosition
+  desktopImageUrl String
+  mobileImageUrl  String
+  headline       String?
+  ctaLabel       String?
+  ctaUrl         String?
+  priority       Int            @default(0)
+  startsAt       DateTime
+  endsAt         DateTime?
+  isActive       Boolean        @default(true)
+  createdById    String         @db.Uuid
+  createdBy      User           @relation(fields: [createdById], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
+  @@index([page, position, isActive, startsAt, endsAt])
   @@map("banners")
-}
-
-// ──────────────────── FIRST CITIZEN ────────────────
-
-model FirstCitizenAccount {
-  id                  String    @id @default(cuid())
-  userId              String    @unique
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cardNumber          String    @unique
-  tier                String    @default("classic")
-  pointsBalance       Int       @default(0)
-  annualSpend         Float     @default(0)
-  pointsIssuedMTD     Int       @default(0)
-  pointsRedeemedMTD   Int       @default(0)
-  joinedDate          DateTime  @default(now())
-  expiryDate          DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-
-  transactions        PointTransaction[]
-
-  @@map("first_citizen_accounts")
-}
-
-model PointTransaction {
-  id            String              @id @default(cuid())
-  accountId     String
-  account       FirstCitizenAccount @relation(fields: [accountId], references: [id])
-  type          String
-  points        Int
-  description   String
-  orderId       String?
-  expiresAt     DateTime?
-  createdAt     DateTime            @default(now())
-
-  @@map("point_transactions")
-}
-
-model FCTierRule {
-  id          String    @id @default(cuid())
-  tier        String    @unique
-  minSpend    Float
-  pointsRate  Float
-  updatedAt   DateTime  @updatedAt
-
-  @@map("fc_tier_rules")
 }
 
 // ──────────────────── SEARCH ───────────────────────
 
 model SearchSynonym {
-  id          String    @id @default(cuid())
-  objectId    String    @unique
-  synonyms    String    @default("[]")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String      @id @default(uuid()) @db.Uuid
+  type      SynonymType
+  terms     String[]
+  createdAt DateTime    @default(now())
 
   @@map("search_synonyms")
+}
+
+model SearchPromoted {
+  id        String    @id @default(uuid()) @db.Uuid
+  query     String
+  productId String    @db.Uuid
+  product   Product   @relation(fields: [productId], references: [id])
+  position  Int
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("search_promoted")
+}
+
+// ──────────────────── PAYMENTS ─────────────────────
+
+model Payment {
+  id                String   @id @default(uuid()) @db.Uuid
+  razorpayOrderId   String   @unique
+  razorpayPaymentId String?  @unique
+  amount            Int
+  currency          String   @default("INR")
+  status            String   @default("pending")
+  refundId          String?
+  refundAmount      Int?
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("payments")
+}
+
+// ──────────────────── STAFF AUDIT LOG ──────────────
+
+model StaffAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  staffUserId String   @db.Uuid
+  staffUser   User     @relation(fields: [staffUserId], references: [id])
+  action      String
+  entityType  String
+  entityId    String
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime @default(now())
+
+  @@map("staff_audit_log")
 }
