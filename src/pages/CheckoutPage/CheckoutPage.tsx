@@ -7,6 +7,15 @@ import {
 } from 'lucide-react'
 import { useCartStore } from '@store/useCartStore'
 import { useAuthStore } from '@store/useAuthStore'
+import { api } from '@services/api'
+import { toast } from '@store/useToastStore'
+import { trackBeginCheckout, trackAddPaymentInfo, trackPurchase, type GAItem } from '@utils/analytics'
+
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open(): void }
+  }
+}
 import { WOMEN_ETHNIC_WEAR } from '@data/products/womenEthnicWear'
 import { formatINR } from '@utils/format'
 import { cn } from '@utils/cn'
@@ -776,7 +785,7 @@ function OrderSummary({
 export function CheckoutPage() {
   const navigate = useNavigate()
   const { items, clearCart } = useCartStore()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   const [activeTab, setActiveTab]       = useState<PaymentTab>('upi')
   const [, setPaymentLabel] = useState('')
@@ -807,12 +816,71 @@ export function CheckoutPage() {
     return null
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     setLoading(true)
-    setTimeout(() => {
-      clearCart()
-      navigate('/')
-    }, 1800)
+    try {
+      const gaItems: GAItem[] = items.map((i) => ({
+        item_id: i.productId,
+        item_name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+      }))
+
+      trackBeginCheckout(totals.payTotal, gaItems)
+      trackAddPaymentInfo(totals.payTotal, activeTab, gaItems)
+
+      if (activeTab === 'cod') {
+        // COD — place order directly without payment gateway
+        await api.post('/orders', { paymentMethod: 'cod', amount: totals.payTotal })
+        trackPurchase(`cod-${Date.now()}`, totals.payTotal, gaItems)
+        clearCart()
+        navigate('/account/orders')
+        return
+      }
+
+      const { orderId, amount, currency, keyId } = await api.post<{
+        orderId: string; amount: number; currency: string; keyId: string
+      }>('/payments/create-order', { amount: totals.payTotal, receipt: `receipt_${Date.now()}` })
+
+      const rzp = new window.Razorpay({
+        key: keyId,
+        order_id: orderId,
+        amount,
+        currency,
+        name: 'Shoppers Stop',
+        description: 'Fashion & Lifestyle Purchase',
+        theme: { color: '#C0001D' },
+        prefill: {
+          name:    user?.fullName ?? '',
+          email:   user?.email ?? '',
+          contact: user?.mobile ?? '',
+        },
+        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+          try {
+            await api.post('/payments/verify', {
+              razorpayOrderId:   response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+              orderId,
+            })
+            trackPurchase(response.razorpay_payment_id, totals.payTotal, gaItems)
+            clearCart()
+            navigate('/account/orders')
+          } catch {
+            toast.error('Payment verification failed. Please contact support.')
+          }
+        },
+        modal: {
+          ondismiss: () => setLoading(false),
+        },
+      })
+
+      rzp.open()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Payment failed. Please try again.'
+      toast.error(msg)
+      setLoading(false)
+    }
   }
 
   const payLabel =

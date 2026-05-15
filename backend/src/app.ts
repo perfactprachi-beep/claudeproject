@@ -28,6 +28,7 @@ import cmsRoutes, { adminCmsRouter } from './routes/cms.routes'
 import deliveryRoutes, { adminDeliveryRouter } from './routes/delivery.routes'
 import analyticsRoutes from './routes/analytics.routes'
 import staffRoutes, { adminCustomerRouter } from './routes/staff.routes'
+import uploadRoutes from './routes/upload.routes'
 
 const app = express()
 
@@ -89,6 +90,7 @@ app.use('/api/admin/delivery',   adminDeliveryRouter)
 app.use('/api/admin/analytics',  analyticsRoutes)
 app.use('/api/admin/staff',      staffRoutes)
 app.use('/api/admin/customers',  adminCustomerRouter)
+app.use('/api/admin/upload',     uploadRoutes)
 
 // 404 & error handlers
 app.use(notFound)
